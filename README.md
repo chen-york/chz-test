@@ -1,2 +1,2 @@
 # chz-test
-chztestw
+chztest

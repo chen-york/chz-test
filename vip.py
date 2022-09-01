@@ -34,7 +34,7 @@ nodeManager5=SubElement(root,'target')
 nodeManager5.attrib["dev"] = str("vda")
 nodeManager5.attrib["bus"] =str("virtio")
 tree = ElementTree(root)
-tree.write('/home/wb.chenhongzhan/disk.xml')
+tree.write('/disk.xml')
 
 def usage():
     print ("run help: python script vm_name")
@@ -62,15 +62,15 @@ def add_disk(vm_name):
             print('\033[1;31m crezte disk error ,please check \033[0m')
     else:
         print("\033[1;33m  option is cancel \033[0m")
-    tree = ET.parse("/home/wb.chenhongzhan/disk.xml")
+    tree = ET.parse("/disk.xml")
     root = tree.getroot()
     for disk in root.iter("source"):
         disk.attrib["name"] = str(disk_name)
     for drive in root.iter("target"):
         drive.attrib["dev"] = str(disk_drive)
-    tree.write('/home/wb.chenhongzhan/disk.xml')
+    tree.write('/disk.xml')
     print("\033[1;32m 正在挂载磁盘，请稍等! \033[0m")
-    attch = subprocess.Popen('virsh attach-device %s /home/wb.chenhongzhan/disk.xml --persistent ' % (vm_name),stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    attch = subprocess.Popen('virsh attach-device %s /disk.xml --persistent ' % (vm_name),stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     output, err = attch.communicate()
     if output.find('Device attached successfully') > -1:
         print("\033[1;32m attach %s  successfully ! \033[0m" % (disk_name))

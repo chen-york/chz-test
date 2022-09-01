@@ -1,63 +1,89 @@
-import tkinter as tk
-import tkinter.messagebox
-import webbrowser as wb
+import os
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import Element, SubElement, ElementTree
 
+#创建disk.xml文件模板
+root = Element('disk')
+root.attrib["type"] = str("network")
+root.attrib["device"] =str("disk")
+nodeManager1 = SubElement(root, 'driver')
+nodeManager1.attrib["name"] = str("qemu")
+nodeManager1.attrib["type"] = str("raw")
+nodeManager1.attrib["cache"] = str("none")
+nodeManager2 = SubElement(root,'auth')
+nodeManager2.attrib["username"] = str("libvirt")
+nodeManager2_1 = SubElement(nodeManager2,'secret')
+nodeManager2_1.attrib["type"]=str("ceph")
+nodeManager2_1.attrib["uuid"]=str("c204b55b-865c-4022-9d74-af3b2d20e4aa")
+nodeManager3= SubElement(root,'source')
+nodeManager3.attrib["protocol"]=str("rbd")
+nodeManager3.attrib["name"]=str("volans-site5-sata-img/cld-test-254-227_10.246.254.227_sys")
+nodeManager3_1 =SubElement(nodeManager3,"host")
+nodeManager3_1.attrib["name"] = str("10.62.130.200")
+nodeManager3_1.attrib["port"] = str("6789")
+nodeManager3_2 =SubElement(nodeManager3,"host")
+nodeManager3_2.attrib["name"] = str("10.62.130.201")
+nodeManager3_2.attrib["port"] = str("6789")
+nodeManager3_3 =SubElement(nodeManager3,"host")
+nodeManager3_3.attrib["name"] = str("10.62.130.202")
+nodeManager3_3.attrib["port"] = str("6789")
+nodeManager4= SubElement(root,'backingStore')
+nodeManager5=SubElement(root,'target')
+nodeManager5.attrib["dev"] = str("vda")
+nodeManager5.attrib["bus"] =str("virtio")
+tree = ElementTree(root)
+tree.write('/home/wb.chenhongzhan/disk.xml')
 
+def usage():
+    print ("run help: python script vm_name")
+    exit(1)
 
-class player:
-    def __init__(self):
-        
-        self.root = tk.Tk()  # 初始化窗口
-        self.root.title('黄陈陈VIP视频播放器')  # 窗口名称
-        self.root.geometry("500x500")  # 设置窗口大小
-        # 设置窗口是否可变，宽不可变，高可变，默认为True
-        self.root.resizable(width=True, height=True)
-        self.menu = tk.Menu(self.root)
-        self.helpmenu = tk.Menu(self.menu, tearoff=0)
-        self.root.config(menu=self.menu)
-        self.val = tk.StringVar(value='')
-        self.label1 = tk.Label(self.root, text='视频播放通道')
-        self.label1.place(x=20, y=20, width=100, height=20)
-        self.Radio = tk.IntVar(value=1)
-        self.Radio1 = tk.Radiobutton(self.root, variable=self.Radio, value=0, text='视频通道1')
-        self.Radio1.place(x=200, y=20, width=100, height=20)
-        self.val1 = tk.StringVar(value='')
-        self.link = tk.Label(self.root, text='视频播放链接')
-        self.link.place(x=20, y=60, width=100, height=20)
-        self.movie = tk.Entry(self.root, textvariable=self.val1)
-        self.movie.place(x=130, y=60, width=300, height=20)
-        self.warn = tk.Label(self.root, text='将视频链接复制到框内，点击播放VIP视频')
-        self.warn.place(x=50, y=90, width=400, height=20)
-        self.val2 = tk.StringVar
-        self.start = tk.Button(self.root, text='播放VIP视频', command=self.Button)
-        self.start.place(x=220, y=140, width=80, height=30)
-        self.start1 = tk.Button(self.root, text='爱奇艺', command=self.openaqy)
-        self.start1.place(x=100, y=200, width=70, height=30)
-        self.start2 = tk.Button(self.root, text='腾讯视频', command=self.opentx)
-        self.start2.place(x=200, y=200, width=80, height=30)
-        self.start3 = tk.Button(self.root, text='芒果TV', command=self.openyq)
-        self.start3.place(x=300, y=200, width=80, height=30)
-        self.b1=tk.Button(self.root,text='此播放器为黄陈陈专用，盗版必究！')
-        self.b1.place(x=150,y=400,width=200,height=40,anchor='nw')
-        self.root.mainloop()
+disk_name=""
+disk_size=""
+disk_drive=""
+confire=""
+#创建并加载磁盘
+def add_disk(vm_name):
+    print("\033[1;32m 请参考虚拟机的磁盘命名方式输入新添加磁盘的各项所需信息! \033[0m")
+    os.system("virsh domblklist %s"  %(vm_name))
+    disk_name  = input("\033[1;32m 请输入新添加的磁盘名字: \033[0m")
+    disk_size  = input("\033[1;32m 请输入新添加磁盘的大小: \033[0m")
+    disk_drive = input("\033[1;32m 请输入添加磁盘的盘符: \033[0m")
+    confirm = input("\033[1;32m please confirm and input yes or no : \033[0m")
+    if str(confirm) == "yes":
+        print("\033[1;32m 开始创建磁盘，请稍等! \033[0m")
+        create_data = subprocess.Popen("qemu-img  create -f raw rbd:%s %s" % (disk_name, disk_size),stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        output, err = create_data.communicate()
+        if output.find('fmt=raw size=%s' % (disk_size)) > -1:
+            print("\033[1;32m create %s  successfully ! \033[0m" % (disk_name))
+        else:
+            print('\033[1;31m crezte disk error ,please check \033[0m')
+    else:
+        print("\033[1;33m  option is cancel \033[0m")
+    tree = ET.parse("/home/wb.chenhongzhan/disk.xml")
+    root = tree.getroot()
+    for disk in root.iter("source"):
+        disk.attrib["name"] = str(disk_name)
+    for drive in root.iter("target"):
+        drive.attrib["dev"] = str(disk_drive)
+    tree.write('/home/wb.chenhongzhan/disk.xml')
+    print("\033[1;32m 正在挂载磁盘，请稍等! \033[0m")
+    attch = subprocess.Popen('virsh attach-device %s /home/wb.chenhongzhan/disk.xml --persistent ' % (vm_name),stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    output, err = attch.communicate()
+    if output.find('Device attached successfully') > -1:
+        print("\033[1;32m attach %s  successfully ! \033[0m" % (disk_name))
+    else:
+        print('\033[1;31m attach disk error ,please check \033[0m')
 
-    def Button(self):
-        a = 'http://www.wmxz.wang/video.php?url='
-        b = self.movie.get()
-        wb.open(a + b)  # 打开浏览器进行播放
+if __name__ == "__main__":
+    arg=len(sys.argv)
+    if arg == 1:
+        usage()
+    if arg== 2:
+        if sys.argv[1]=="-h":
+           usage()
+    vm_name=sys.argv[1]
+    add_disk(vm_name)
 
-
-    def openaqy(self):
-        wb.open('http://www.iqiyi.com')
-
-    def opentx(self):
-        wb.open('http://v.qq.com')
-
-    def openyq(self):
-        wb.open('https://www.mgtv.com/')
-
-
-
-
-if __name__ == '__main__':
-    player()
